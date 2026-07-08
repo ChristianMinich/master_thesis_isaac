@@ -93,7 +93,7 @@ try:
     from isaacsim.core.api.objects import FixedCuboid, VisualCylinder
     from isaacsim.core.utils.rotations import euler_angles_to_quat
     from isaacsim.core.utils.stage import add_reference_to_stage
-    from isaacsim.storage.native import get_assets_root_path
+    #from isaacsim.storage.native import get_assets_root_path
 
     record("core_imports", True)
 except Exception as exc:  # noqa: BLE001
@@ -129,6 +129,10 @@ WALL_THICKNESS = 0.2
 
 GO2_RELATIVE_PATH = "/Isaac/Robots/Unitree/Go2/go2.usd"  # <-- placeholder, version dependent
 GO2_PRIM_PATH = "/World/Go2"
+GO2_USD_PATH = (
+    "https://omniverse-content-production.s3-us-west-2.amazonaws.com/"
+    "Assets/Isaac/6.0/Isaac/Robots/Unitree/Go2/go2.usd"
+)
 GO2_SPAWN_POSITION = (-3.5, -3.5, 0.45)
 
 GOAL_POSITION = (3.5, 3.5)
@@ -244,19 +248,27 @@ except Exception as exc:  # noqa: BLE001
 # ---------------------------------------------------------------------------
 robot = None
 try:
-    if assets_root is None:
-        raise RuntimeError("assets root unavailable; cannot load Go2 USD")
+    go2_usd_path = GO2_USD_PATH
 
-    go2_usd_path = assets_root + GO2_RELATIVE_PATH
-    add_reference_to_stage(usd_path=go2_usd_path, prim_path=GO2_PRIM_PATH)
+    add_reference_to_stage(
+        usd_path=go2_usd_path,
+        prim_path=GO2_PRIM_PATH,
+    )
+
     prim = world.stage.GetPrimAtPath(GO2_PRIM_PATH)
     if not prim.IsValid():
-        raise RuntimeError(f"prim at {GO2_PRIM_PATH} is invalid after referencing {go2_usd_path}")
+        raise RuntimeError(
+            f"prim at {GO2_PRIM_PATH} is invalid after referencing {go2_usd_path}"
+        )
+
     UsdGeom.XformCommonAPI(prim).SetTranslate(Gf.Vec3d(*GO2_SPAWN_POSITION))
 
     from isaacsim.core.prims import SingleArticulation
 
-    robot = SingleArticulation(prim_path=GO2_PRIM_PATH, name="go2")
+    robot = SingleArticulation(
+        prim_path=GO2_PRIM_PATH,
+        name="go2",
+    )
     world.scene.add(robot)
 
     world.reset()
@@ -264,14 +276,15 @@ try:
     num_dof = robot.num_dof
     if num_dof is None or num_dof <= 0:
         raise RuntimeError(f"articulation has no DOFs (num_dof={num_dof})")
+
     record("go2_load", True, detail=f"{go2_usd_path} ({num_dof} DOFs)")
-except Exception as exc:  # noqa: BLE001
+
+except Exception as exc:
     record("go2_load", False, detail=str(exc))
-    # try to at least init the world so the remaining physics checks can run
     try:
         if world.physics_sim_view is None:
             world.reset()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 # ---------------------------------------------------------------------------
