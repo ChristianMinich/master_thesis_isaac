@@ -371,9 +371,22 @@ the metric families above, producing the exposé's evaluation matrix.
 ```
 isaac_unitree_starter/
 ├── TUTORIAL.md                        ← this file
+├── validate_go2_setup.py             ← staged smoke-test: 8 checks (sim launch,
+│                                        imports, assets, scene build, Go2 load,
+│                                        physics settle, movement through waypoints)
+│                                        with PASS/FAIL summary
 ├── create_empty_sim_scene.py          ← pure Isaac Sim: empty stage → ground,
 │                                        lights, camera, Go2 asset, obstacle +
 │                                        wall layout, interactive sim loop
+├── create_room_scene.py               ← Isaac Sim: 10m×10m room with 4 walls,
+│                                        6 obstacles, green goal marker, Go2
+├── generate_room_scene_data.py        ← ego-camera traversal through the room
+│                                        scene, saves RGB + depth + pose + goal
+│                                        as .npz chunks + scene_metadata.json
+├── generate_vla_sensor_data_go2.py    ← full multi-sensor VLA data: camera,
+│                                        depth, LiDAR, IMU, proprioception,
+│                                        actions, language instruction; per-episode
+│                                        .npz + dataset_metadata.json
 ├── go2_lab_env.py                     ← Isaac Lab DirectRLEnv for the Go2:
 │                                        goal-reaching task, obs/reward/
 │                                        termination/reset structure
@@ -442,30 +455,102 @@ Roughly in the exposé's implementation order:
 
 ## 14. Quick-start: running the pipeline
 
-All simulator scripts must run on a machine with Isaac Sim + Isaac Lab
-installed (Linux/Windows with an RTX GPU — per the exposé, the RTX 5090
-workstation). Only `slam_pose_eval_stub.py` runs anywhere.
+### Prerequisites
+
+All simulator scripts must run on a machine with **Isaac Sim** (and
+optionally **Isaac Lab**) installed — Linux or Windows with an RTX GPU.
+Only `slam_pose_eval_stub.py` runs anywhere with plain Python.
+
+There are **two Python interpreters** to choose from:
+
+| Interpreter | When to use | Typical location |
+|---|---|---|
+| `./python.sh` | **Isaac Sim scripts** (pure `isaacsim` imports, no `isaaclab`) | `<Isaac Sim install>/python.sh` |
+| `./isaaclab.sh -p` | **Isaac Lab scripts** (`isaaclab` + `isaaclab_assets` imports) | `<Isaac Lab repo>/isaaclab.sh` |
+
+Scripts that `from isaacsim import SimulationApp` use `./python.sh`.
+Scripts that `from isaaclab.app import AppLauncher` use `./isaaclab.sh -p`.
+
+> **Tip**: if you're unsure which interpreter a script needs, look at its
+> first non-comment import line. The docstring at the top of each script
+> also shows the exact run command.
+
+### Step-by-step
+
+Run these commands **from the Isaac Sim or Isaac Lab install directory**
+(the scripts use relative paths inside the project, so pass the full or
+relative path to the script file).
 
 ```bash
-# 0. (anywhere) test the pose-metric stubs
+# ─── 0. (anywhere, plain Python) test the pose-metric stubs ───────────
 python isaac_unitree_starter/slam_pose_eval_stub.py
 
-# 1. Interactive Isaac Sim scene (from the Isaac Sim install dir)
+# ─── 1. Validate your setup (Isaac Sim interpreter) ──────────────────
+#    Runs 8 staged checks: sim launch, imports, Isaac Lab availability,
+#    Nucleus assets, room scene, Go2 articulation, physics, movement.
+#    Prints a PASS/FAIL summary; exit code 0 = all required checks pass.
+./python.sh isaac_unitree_starter/validate_go2_setup.py --headless
+#    (omit --headless to watch the robot in the GUI)
+
+# ─── 2. Interactive room scene (Isaac Sim) ────────────────────────────
+#    Opens the GUI with the 10m×10m room, obstacles, goal, and Go2.
+./python.sh isaac_unitree_starter/create_room_scene.py
+
+# ─── 3. Interactive empty scene (Isaac Sim, original starter) ─────────
 ./python.sh isaac_unitree_starter/create_empty_sim_scene.py
 
-# 2. Short RL training run (from the Isaac Lab repo root)
+# ─── 4. Generate basic synthetic data from the room scene ────────────
+#    Ego-camera traversal → RGB, depth, pose, goal in .npz chunks.
+./python.sh isaac_unitree_starter/generate_room_scene_data.py --headless
+#    Options: --num-frames 300  --output-dir data/room_scene_go2
+
+# ─── 5. Generate full multi-sensor VLA data ──────────────────────────
+#    Camera + depth + LiDAR + IMU + proprioception + actions + language.
+./python.sh isaac_unitree_starter/generate_vla_sensor_data_go2.py --headless
+#    Options: --num-episodes 3  --steps-per-episode 200
+#             --output-dir data/vla_sensors_go2  --seed 42
+
+# ─── 6. Short RL training run (Isaac Lab interpreter) ────────────────
 ./isaaclab.sh -p isaac_unitree_starter/train_rl_go2.py --headless
 
-# 3. Evaluation rollout
+# ─── 7. Evaluation rollout (Isaac Lab) ───────────────────────────────
 ./isaaclab.sh -p isaac_unitree_starter/eval_go2.py --headless
 
-# 4. VLA-style episode data collection
+# ─── 8. VLA-style episode data collection (Isaac Lab) ────────────────
 ./isaaclab.sh -p isaac_unitree_starter/collect_vla_data_go2.py --headless
 
-# 5. World-model transition data collection
+# ─── 9. World-model transition data collection (Isaac Lab) ───────────
 ./isaaclab.sh -p isaac_unitree_starter/collect_world_model_data_go2.py --headless
 ```
 
+### Recommended order for first-time setup
+
+1. Run `validate_go2_setup.py` first — it tells you exactly what works and
+   what doesn't on your install.
+2. If the validation passes, run `create_room_scene.py` (GUI) to see the
+   scene visually.
+3. Then try `generate_room_scene_data.py` or
+   `generate_vla_sensor_data_go2.py` to produce your first synthetic dataset.
+4. If you also have Isaac Lab installed, continue with `train_rl_go2.py`
+   and the remaining Isaac Lab scripts.
+
+### Troubleshooting
+
+- **"ModuleNotFoundError: No module named 'isaacsim'"** — you ran the
+  script with the system Python instead of `./python.sh`.
+- **"ModuleNotFoundError: No module named 'isaaclab'"** — you used
+  `./python.sh` for an Isaac Lab script; use `./isaaclab.sh -p` instead.
+- **"Could not resolve assets root path"** — Nucleus is not running or not
+  reachable. Start the Nucleus local server from the Omniverse Launcher.
+- **Go2 asset path not found** — the `GO2_RELATIVE_PATH` constant
+  (`/Isaac/Robots/Unitree/Go2/go2.usd`) is version-dependent. Open the
+  Nucleus asset browser in the Omniverse app and search for `Go2` to find
+  the correct path, then update the constant in the script.
+- **Isaac Lab import paths changed** — the `isaaclab_assets` module layout
+  can differ between Isaac Lab versions. Check your version's docs for the
+  correct import path for `UNITREE_GO2_CFG`.
+
 If an import fails, the two most likely causes are (a) the script was not
-run with the Isaac Sim / Isaac Lab Python, or (b) a version-dependent
-module path (marked in the code comments) differs in your installation.
+run with the correct Isaac Sim / Isaac Lab Python interpreter, or (b) a
+version-dependent module path (marked in the code comments) differs in
+your installation.
