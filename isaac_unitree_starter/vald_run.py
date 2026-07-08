@@ -1,6 +1,3 @@
-conda activate env_isaaclab
-
-python -u - <<'PY'
 from isaacsim.simulation_app import SimulationApp
 import time
 
@@ -14,6 +11,3 @@ for i in range(100):
 print("3 before close")
 app.close()
 print("4 after close")
-PY
-
-echo "exit code: $?"
