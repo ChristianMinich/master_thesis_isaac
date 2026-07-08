@@ -1,0 +1,11 @@
+# Config for synthetic_data_generation/world_model/generate_world_model_data.py
+# Keys correspond 1:1 to the script's CLI flags (dashes -> underscores).
+# CLI flags override these values.
+backend: mock            # mock | isaac
+num_envs: 8
+total_transitions: 5000
+chunk_size: 1000
+policy: random           # random | zero | scripted_goal
+noise_std: 0.3
+seed: 42
+output_dir: data/synthetic/world_model_go2

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "navbench"
+version = "0.1.0"
+description = "Simulation-based benchmark for comparing approaches to robot navigation (SLAM, VLA, RL, World Models) on Isaac Sim / Isaac Lab."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christian Minich", email = "cminich@uni-osnabrueck.de" }]
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "mypy>=1.8",
+    "ruff>=0.4",
+]
+# Isaac Sim / Isaac Lab are installed via NVIDIA's own installers / omniverse
+# launcher and are NOT pip-installable here. These extras only document the
+# optional dependency groups used by the adapters.
+isaac = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "scripts"]

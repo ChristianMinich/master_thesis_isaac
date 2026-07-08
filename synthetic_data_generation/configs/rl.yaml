@@ -1,0 +1,11 @@
+# Config for synthetic_data_generation/rl/generate_rl_data.py
+# Keys correspond 1:1 to the script's CLI flags (dashes -> underscores).
+# CLI flags override these values.
+backend: mock            # mock | isaac
+num_envs: 8
+num_episodes: 10
+max_steps: 300
+policy: random           # random | zero | scripted_goal
+noise_std: 0.1
+seed: 42
+output_dir: data/synthetic/rl_go2
