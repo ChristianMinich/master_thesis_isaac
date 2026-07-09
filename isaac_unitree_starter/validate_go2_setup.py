@@ -1,14 +1,9 @@
 """
 Simple Isaac Sim scene with Unitree Go2 + room obstacles.
 
-Expected project structure:
+The Go2 robot is loaded directly from the NVIDIA Omniverse content server:
 
-    master_thesis_isaac/
-    ├── assets/
-    │   └── robots/
-    │       └── go2.usd
-    └── isaac_unitree_starter/
-        └── simple_go2_scene.py
+    https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Unitree/Go2/go2.usd
 
 Run:
 
@@ -57,10 +52,10 @@ from isaacsim.core.utils.stage import add_reference_to_stage
 # -----------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-GO2_USD_PATH = PROJECT_ROOT / "assets" / "robots" / "go2.usd"
-
-if not GO2_USD_PATH.exists():
-    raise FileNotFoundError(f"Go2 USD not found here: {GO2_USD_PATH}")
+GO2_USD_PATH = (
+    "https://omniverse-content-production.s3-us-west-2.amazonaws.com"
+    "/Assets/Isaac/6.0/Isaac/Robots/Unitree/Go2/go2.usd"
+)
 
 
 # -----------------------------------------------------------------------------
@@ -195,7 +190,7 @@ world.scene.add(
 print(f"Loading Go2 from: {GO2_USD_PATH}")
 
 add_reference_to_stage(
-    usd_path=str(GO2_USD_PATH),
+    usd_path=GO2_USD_PATH,
     prim_path=GO2_PRIM_PATH,
 )
 
